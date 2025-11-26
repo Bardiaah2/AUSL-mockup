@@ -1,0 +1,39 @@
+from flask import Flask, jsonify, render_template
+from pymongo import MongoClient
+
+app = Flask(__name__)
+
+# MongoDB connection
+client = MongoClient("mongodb+srv://<username>:<password>@cluster0.mongodb.net")  # Replace with your URI
+db = client["softball"]
+collection1 = db["players"]
+collection2 = db["players_hitting"]
+
+hitting_values = {"Single": 10, "Double": 20, "Triple": 30,"Home Run": 40, "Stolen Base": 20, "Caught Stealing": -20,"Walk": 20,"HBP": 8, "Sacrifice Fly/Bunt": 10}
+pitching_values = {"out": 4, "allowed run": -10}
+
+@app.route("/api/pitchingstats")
+def get_stats():
+    # Pull all documents
+    docs = list(collection1.find({}))
+
+    # Remove _id to make JSON serializable
+    #returns each athlete with all stats
+    for doc in docs:
+        doc.pop("_id", None)
+    
+    return jsonify(docs)  # Return JSON
+
+@app.route("/api/hittingstats")
+def index():
+    # Pull all documents
+    docs = list(collection2.find({}))
+    for doc in docs:
+        doc.pop("_id", None)
+        
+
+    # Render HTML template (optional)
+    return jsonify(docs) 
+
+if __name__ == "__main__":
+    app.run(debug=True)
