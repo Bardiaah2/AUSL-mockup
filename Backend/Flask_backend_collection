@@ -1,39 +1,131 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify
 from pymongo import MongoClient
 
 app = Flask(__name__)
 
 # MongoDB connection
-client = MongoClient("mongodb+srv://<username>:<password>@cluster0.mongodb.net")  # Replace with your URI
+client = MongoClient("mongodb+srv://bardiaah1384_db_user:bardia@cluster0.llhkhbv.mongodb.net/?appName=Cluster0")  # Replace with your URI
 db = client["softball"]
-collection1 = db["players"]
-collection2 = db["players_hitting"]
+collection1 = db["pitching_players"]   # pitching
+collection2 = db["players_hitting"]    # hitting
+collection3 = db["players"]            # combined
 
-hitting_values = {"Single": 10, "Double": 20, "Triple": 30,"Home Run": 40, "Stolen Base": 20, "Caught Stealing": -20,"Walk": 20,"HBP": 8, "Sacrifice Fly/Bunt": 10}
+# Points values
+hitting_values = {
+    "Single": 10, "Double": 20, "Triple": 30, "Home Run": 40,
+    "Stolen Base": 20, "Caught Stealing": -20,
+    "Walk": 20, "HBP": 8, "Sacrifice Fly/Bunt": 10
+}
 pitching_values = {"out": 4, "allowed run": -10}
 
-@app.route("/api/pitchingstats")
-def get_stats():
-    # Pull all documents
+# --- Helper functions ---
+def calculate_pitching_points(doc):
+    return doc.get("IP", 0) * pitching_values["out"] + doc.get("ER", 0) * pitching_values["allowed run"]
+
+def calculate_hitting_points(doc):
+    return (
+        doc.get("1B", 0) * hitting_values["Single"] +
+        doc.get("2B", 0) * hitting_values["Double"] +
+        doc.get("3B", 0) * hitting_values["Triple"] +
+        doc.get("HR", 0) * hitting_values["Home Run"] +
+        doc.get("SB", 0) * hitting_values["Stolen Base"] +
+        doc.get("CS", 0) * hitting_values["Caught Stealing"] +
+        doc.get("BB", 0) * hitting_values["Walk"] +
+        doc.get("HP", 0) * hitting_values["HBP"] +
+        (doc.get("SF", 0) + doc.get("SH", 0)) * hitting_values["Sacrifice Fly/Bunt"]
+    )
+
+# --- Pitching Stats ---
+@app.route("/api/pitchingstats", methods=["GET"])
+def get_pitching_stats():
     docs = list(collection1.find({}))
-
-    # Remove _id to make JSON serializable
-    #returns each athlete with all stats
+    result = []
     for doc in docs:
-        doc.pop("_id", None)
-    
-    return jsonify(docs)  # Return JSON
+        doc_copy = doc.copy()
+        doc_copy.pop("_id", None)
+        doc_copy["Points"] = calculate_pitching_points(doc)
+        result.append(doc_copy)
+    return jsonify(result)
 
-@app.route("/api/hittingstats")
-def index():
-    # Pull all documents
+@app.route("/api/pitchingstats", methods=["POST"])
+def update_pitching_stats():
+    docs = list(collection1.find({}))
+    for doc in docs:
+        doc_id = doc["_id"]
+        points = calculate_pitching_points(doc)
+        collection1.update_one({"_id": doc_id}, {"$set": {"Points": points}})
+    return jsonify({"status": "Pitching points updated"}), 200
+
+# --- Hitting Stats ---
+@app.route("/api/hittingstats", methods=["GET"])
+def get_hitting_stats():
+    docs = list(collection2.find({}))
+    result = []
+    for doc in docs:
+        doc_copy = doc.copy()
+        doc_copy.pop("_id", None)
+        doc_copy["Points"] = calculate_hitting_points(doc)
+        result.append(doc_copy)
+    return jsonify(result)
+
+@app.route("/api/hittingstats", methods=["POST"])
+def update_hitting_stats():
     docs = list(collection2.find({}))
     for doc in docs:
-        doc.pop("_id", None)
-        
+        doc_id = doc["_id"]
+        points = calculate_hitting_points(doc)
+        collection2.update_one({"_id": doc_id}, {"$set": {"Points": points}})
+    return jsonify({"status": "Hitting points updated"}), 200
 
-    # Render HTML template (optional)
-    return jsonify(docs) 
+# --- Combined Points ---
+@app.route("/api/points", methods=["GET"])
+def get_combined_points():
+    docs = list(collection3.find({}))
+    result = []
+    for doc in docs:
+        doc_copy = doc.copy()
+        doc_copy.pop("_id", None)
+        result.append(doc_copy)
+    return jsonify(result)
+
+@app.route("/api/points", methods=["POST"])
+def update_combined_points():
+    combined = {}
+
+    # Pull pitching points
+    for doc in collection1.find({}):
+        name = doc.get("Athlete")
+        if not name:
+            continue
+        combined[name] = {
+            "Athlete": name,
+            "PitchingPoints": doc.get("Points", 0),
+            "HittingPoints": 0
+        }
+
+    # Pull hitting points
+    for doc in collection2.find({}):
+        name = doc.get("Athlete")
+        if not name:
+            continue
+        if name in combined:
+            combined[name]["HittingPoints"] = doc.get("Points", 0)
+        else:
+            combined[name] = {
+                "Athlete": name,
+                "PitchingPoints": 0,
+                "HittingPoints": doc.get("Points", 0)
+            }
+
+    # Clear old combined collection and insert new totals
+    collection3.delete_many({})
+    final_docs = []
+    for data in combined.values():
+        data["TotalPoints"] = data["PitchingPoints"] + data["HittingPoints"]
+        collection3.insert_one(data)
+        final_docs.append(data)
+
+    return jsonify({"status": "Combined points updated", "count": len(final_docs)}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
