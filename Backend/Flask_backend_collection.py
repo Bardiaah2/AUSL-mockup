@@ -1,10 +1,11 @@
 from flask import Flask, jsonify
 from pymongo import MongoClient
+import os
 
 app = Flask(__name__)
 
 # MongoDB connection
-client = MongoClient("mongodb+srv://bardiaah1384_db_user:bardia@cluster0.llhkhbv.mongodb.net/?appName=Cluster0")  # Replace with your URI
+client = MongoClient(os.getenv("DATABASE_URL"))  # Replace with your URI
 db = client["softball"]
 collection1 = db["pitching_players"]   # pitching
 collection2 = db["players_hitting"]    # hitting
