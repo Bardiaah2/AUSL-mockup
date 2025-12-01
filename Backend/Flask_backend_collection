@@ -18,9 +18,32 @@ hitting_values = {
 }
 pitching_values = {"out": 4, "allowed run": -10}
 
+
 # --- Helper functions ---
+
+def calculate_outs(doc):
+    ip = doc.get("IP", 0)
+
+    try:
+        ip = float(ip)
+    except (ValueError, TypeError):
+        ip = 0
+
+    whole = int(ip)
+    decmial = ip-whole
+    decmial = int(round(decmial * 10))
+    outs = whole*3 + decmial
+    return outs
+
 def calculate_pitching_points(doc):
-    return doc.get("IP", 0) * pitching_values["out"] + doc.get("ER", 0) * pitching_values["allowed run"]
+    outs = int(calculate_outs(doc))
+
+    try:
+        er = int(doc.get("ER", 0))
+    except (ValueError, TypeError):
+        er = 0
+
+    return outs * pitching_values["out"] + er * pitching_values["allowed run"]
 
 def calculate_hitting_points(doc):
     return (
@@ -97,9 +120,17 @@ def update_combined_points():
         name = doc.get("Athlete")
         if not name:
             continue
+
+        pitching_points = doc.get("Points", 0)
+
+        try:
+            pitching_points = int(pitching_points)
+        except ValueError:
+            pitching_points = 0
+
         combined[name] = {
             "Athlete": name,
-            "PitchingPoints": doc.get("Points", 0),
+            "PitchingPoints": pitching_points,
             "HittingPoints": 0
         }
 
@@ -108,13 +139,21 @@ def update_combined_points():
         name = doc.get("Athlete")
         if not name:
             continue
+
+        hitting_points = doc.get("Points", 0)
+
+        try:
+            hitting_points = int(hitting_points)
+        except ValueError:
+            hitting_points = 0
+
         if name in combined:
-            combined[name]["HittingPoints"] = doc.get("Points", 0)
+            combined[name]["HittingPoints"] = hitting_points
         else:
             combined[name] = {
                 "Athlete": name,
                 "PitchingPoints": 0,
-                "HittingPoints": doc.get("Points", 0)
+                "HittingPoints": hitting_points
             }
 
     # Clear old combined collection and insert new totals
