@@ -9,8 +9,15 @@ WORKDIR /app
 COPY package*.json ./
 # Ensure minimal build tools are available for native modules (avoids Alpine issues on some builders)
 RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
-# Install devDependencies so build-time tools (TypeScript, Next.js) are available
-RUN if [ -f package-lock.json ]; then npm ci --include=dev --silent --no-audit --prefer-offline; else npm install --include=dev --silent --no-audit --prefer-offline; fi
+# Install devDependencies so build-time tools (TypeScript, Next.js) are available.
+# Run with `unsafe-perm` and a small retry to be more robust on Render; leave logs enabled
+# so build failures show detailed errors in Render logs.
+RUN npm config set unsafe-perm true && npm config set fetch-retries 5 && npm config set fetch-retry-factor 2 && \
+		if [ -f package-lock.json ]; then \
+			(npm ci --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --include=dev --loglevel=info --no-audit)); \
+		else \
+			(npm install --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --include=dev --loglevel=info --no-audit)); \
+		fi
 
 # Copy source and build
 COPY . .
