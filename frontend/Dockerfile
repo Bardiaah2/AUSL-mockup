@@ -1,14 +1,16 @@
 # Multi-stage Dockerfile for Next.js (suitable for docker-compose)
 # Build stage
-FROM node:20.9.0-alpine AS builder
+FROM node:20.9.0-bullseye AS builder
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 WORKDIR /app
 
 # Install build dependencies (use cache for package files)
 COPY package*.json ./
-# Install devDependencies for build by forcing NODE_ENV=development for the install step.
-RUN if [ -f package-lock.json ]; then npm ci --include=dev --silent; else npm install --include=dev --silent; fi
+# Ensure minimal build tools are available for native modules (avoids Alpine issues on some builders)
+RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install devDependencies so build-time tools (TypeScript, Next.js) are available
+RUN if [ -f package-lock.json ]; then npm ci --include=dev --silent --no-audit --prefer-offline; else npm install --include=dev --silent --no-audit --prefer-offline; fi
 
 # Copy source and build
 COPY . .
@@ -20,7 +22,7 @@ RUN npm run build
 RUN if [ -f package-lock.json ]; then npm prune --production --silent; else npm prune --production --silent; fi
 
 # Production image
-FROM node:22.6.0-alpine AS runner
+FROM node:20.9.0-bullseye-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
