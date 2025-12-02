@@ -3,27 +3,29 @@
 FROM node:20.9.0-bullseye AS builder
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
+# Work directory inside image
 WORKDIR /app
 
-# Install build dependencies (use cache for package files)
-COPY package*.json ./
-# Ensure minimal build tools are available for native modules (avoids Alpine issues on some builders)
+# Copy full repo into the image; we'll detect where `package.json` lives and run
+# install/build from that directory. This makes the Dockerfile robust when the
+# build context is either the repo root (Render) or the `frontend` folder (local).
+COPY . .
+
+# Ensure minimal build tools are available for native modules
 RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
-# Install devDependencies so build-time tools (TypeScript, Next.js) are available.
-# Run with `unsafe-perm` and a small retry to be more robust on Render; leave logs enabled
-# so build failures show detailed errors in Render logs.
+
+# Install devDependencies and run the build from the directory that contains package.json.
 RUN npm config set fetch-retries 5 && npm config set fetch-retry-factor 2 && \
 		if [ -f package-lock.json ]; then \
-			(npm ci --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --unsafe-perm --include=dev --loglevel=info --no-audit)); \
+			cd /app && (npm ci --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --unsafe-perm --include=dev --loglevel=info --no-audit)); \
+		elif [ -f frontend/package-lock.json ]; then \
+			cd /app/frontend && (npm ci --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --unsafe-perm --include=dev --loglevel=info --no-audit)); \
+		elif [ -f package.json ]; then \
+			cd /app && (npm install --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --unsafe-perm --include=dev --loglevel=info --no-audit)); \
 		else \
-			(npm install --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --unsafe-perm --include=dev --loglevel=info --no-audit)); \
-		fi
-
-# Copy source and build
-COPY . .
-# Ensure build runs with production NODE_ENV for consistent prerender behavior
-ENV NODE_ENV=production
-RUN npm run build
+			cd /app/frontend && (npm install --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --unsafe-perm --include=dev --loglevel=info --no-audit)); \
+		fi && \
+		if [ -f package.json ]; then cd /app; else cd /app/frontend; fi && NODE_ENV=production npm run build
 
 # Remove devDependencies to keep final image small
 RUN if [ -f package-lock.json ]; then npm prune --production --silent; else npm prune --production --silent; fi
