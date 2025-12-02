@@ -1,0 +1,39 @@
+# Render service manifest for AUSL-mockup
+# Adjust `repo` and other fields to match your Render account and preferences.
+
+services:
+  - type: web
+    name: ausl-backend
+    env: docker
+    repo: https://github.com/Bardiaah2/AUSL-mockup
+    branch: main
+    dockerfilePath: Backend/Dockerfile
+    # Let the Dockerfile's CMD run. Set PORT/DATABASE_URL as env vars below.
+    envVars:
+      - key: PORT
+        value: "5000"
+      - key: FLASK_ENV
+        value: "production"
+      - key: DATABASE_URL
+        # Intentionally left blank; set this as a secret in the Render dashboard.
+        value: ""
+    autoDeploy: true
+    plan: free
+
+  - type: web
+    name: ausl-frontend
+    env: docker
+    repo: https://github.com/Bardiaah2/AUSL-mockup
+    branch: main
+    dockerfilePath: frontend/Dockerfile
+    # Frontend Dockerfile uses NEXT_PUBLIC_API_URL / BACKEND_URL environment variables
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: BACKEND_URL
+        # Update to the backend service URL after deployment (e.g. https://ausl-backend.onrender.com)
+        value: ""
+      - key: NEXT_PUBLIC_API_URL
+        value: "/api"
+    autoDeploy: true
+    plan: free

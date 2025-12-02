@@ -129,4 +129,7 @@ def update_combined_points():
     return jsonify({"status": "Combined points updated", "count": len(final_docs)}), 200
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 5000))
+    debug = os.getenv("FLASK_ENV", "production") == "development"
+    app.run(host=host, port=port, debug=debug)

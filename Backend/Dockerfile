@@ -11,7 +11,7 @@ WORKDIR /app
 
 # Install build deps, curl (used by HEALTHCHECK), and system libs (e.g. libpq for postgres)
 # Then install Python requirements and remove build deps to keep image small
-COPY ../requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends build-essential libpq-dev gcc curl && \
     pip install --upgrade pip setuptools wheel && \
@@ -26,13 +26,11 @@ COPY . /app
 RUN groupadd -r app && useradd -r -g app app && chown -R app:app /app
 USER app
 
-EXPOSE 8000
+EXPOSE 5000
 
-# Healthcheck (adjust path if your app exposes a different endpoint)
+# Healthcheck - verify the combined points endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+  CMD curl -f http://localhost:${PORT:-5000}/api/points || exit 1
 
-# Default command:
-# - Uses environment variables so you can override WSGI_APP, PORT, WORKERS at runtime.
-# - Assumes a WSGI app entrypoint like "app:app". Override WSGI_APP if different.
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} ${WSGI_APP:-app:app} --workers ${WORKERS:-2} --log-level ${LOG_LEVEL:-info}"]
+# Default command: run the Flask app directly (uses `PORT` env var)
+CMD ["python", "Flask_backend_collection.py"]
