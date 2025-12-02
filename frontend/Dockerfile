@@ -12,11 +12,11 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make
 # Install devDependencies so build-time tools (TypeScript, Next.js) are available.
 # Run with `unsafe-perm` and a small retry to be more robust on Render; leave logs enabled
 # so build failures show detailed errors in Render logs.
-RUN npm config set unsafe-perm true && npm config set fetch-retries 5 && npm config set fetch-retry-factor 2 && \
+RUN npm config set fetch-retries 5 && npm config set fetch-retry-factor 2 && \
 		if [ -f package-lock.json ]; then \
-			(npm ci --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --include=dev --loglevel=info --no-audit)); \
+			(npm ci --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --unsafe-perm --include=dev --loglevel=info --no-audit)); \
 		else \
-			(npm install --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --include=dev --loglevel=info --no-audit)); \
+			(npm install --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --unsafe-perm --include=dev --loglevel=info --no-audit)); \
 		fi
 
 # Copy source and build
