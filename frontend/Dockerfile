@@ -14,22 +14,6 @@ COPY . .
 # Ensure minimal build tools are available for native modules
 RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make g++ ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Install devDependencies and run the build from the directory that contains package.json.
-RUN npm config set fetch-retries 5 && npm config set fetch-retry-factor 2 && \
-		if [ -f package-lock.json ]; then \
-			cd /app && (npm ci --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --unsafe-perm --include=dev --loglevel=info --no-audit)); \
-		elif [ -f frontend/package-lock.json ]; then \
-			cd /app/frontend && (npm ci --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm ci failed, retrying..." && sleep 2 && npm ci --unsafe-perm --include=dev --loglevel=info --no-audit)); \
-		elif [ -f package.json ]; then \
-			cd /app && (npm install --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --unsafe-perm --include=dev --loglevel=info --no-audit)); \
-		else \
-			cd /app/frontend && (npm install --unsafe-perm --include=dev --loglevel=info --no-audit || (echo "npm install failed, retrying..." && sleep 2 && npm install --unsafe-perm --include=dev --loglevel=info --no-audit)); \
-		fi && \
-		if [ -f package.json ]; then cd /app; else cd /app/frontend; fi && NODE_ENV=production npm run build
-
-# Remove devDependencies to keep final image small
-RUN if [ -f package-lock.json ]; then npm prune --production --silent; else npm prune --production --silent; fi
-
 # Production image
 FROM node:20.9.0-bullseye-slim AS runner
 WORKDIR /app
