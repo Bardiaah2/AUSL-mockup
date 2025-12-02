@@ -8,7 +8,7 @@ WORKDIR /app
 # Install build dependencies (use cache for package files)
 COPY package*.json ./
 # Install devDependencies for build by forcing NODE_ENV=development for the install step.
-RUN if [ -f package-lock.json ]; then NODE_ENV=development npm ci --silent; else NODE_ENV=development npm install --silent; fi
+RUN if [ -f package-lock.json ]; then npm ci --include=dev --silent; else npm install --include=dev --silent; fi
 
 # Copy source and build
 COPY . .

@@ -11,7 +11,7 @@ WORKDIR /app
 
 # Install build deps, curl (used by HEALTHCHECK), and system libs (e.g. libpq for postgres)
 # Then install Python requirements and remove build deps to keep image small
-COPY requirements.txt /app/requirements.txt
+COPY Backend/requirements.txt /app/requirements.txt
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends build-essential libpq-dev gcc curl && \
     pip install --upgrade pip setuptools wheel && \
@@ -20,7 +20,7 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy application code
-COPY . /app
+COPY Backend/ /app
 
 # Create a non-root user and give ownership of the app folder
 RUN groupadd -r app && useradd -r -g app app && chown -R app:app /app
