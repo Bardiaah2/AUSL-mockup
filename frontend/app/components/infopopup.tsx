@@ -10,193 +10,142 @@ type InfoPopupProps = {
   onClose: () => void;
 };
 
-// Calculate win points breakdown
+// Point values from breakdownInfo.md
+const STAT_POINTS = {
+  single: 10,
+  double: 20,
+  triple: 30,
+  homeRun: 40,
+  stolenBase: 10,
+  caughtStealing: -10,
+  walk: 10,
+  hitByPitch: 8,
+  sacrifice: 10,
+};
+
+const PITCHING_POINTS = {
+  out: 4,
+  allowedRun: -10,
+};
+
+const WIN_MULTIPLIERS = {
+  inningsWon: 10,
+  gamesWon: 70,
+};
+
+// Calculate win points breakdown from raw data
 function calculateWinBreakdown(row: LeaderboardRow) {
-  const { winPts, games } = row;
-  
-  // Win points are typically based on team wins and individual contributions
-  // In softball, win points come from team victories and player impact
-  const teamWins = Math.round(winPts * 0.55);
-  const clutchPlays = Math.round(winPts * 0.25);
-  const gameImpact = Math.round(winPts * 0.15);
-  const availability = Math.round(winPts * 0.05);
-  
+  const raw = row._raw;
+  if (!raw) {
+    return {
+      category: 'Win Points',
+      breakdown: [{ label: 'No data', value: 0, points: 0, weight: '' }],
+      total: row.winPts,
+    };
+  }
+
+  const inningsWonPoints = raw.InningsWon * WIN_MULTIPLIERS.inningsWon;
+  const gamesWonPoints = raw.Wins * WIN_MULTIPLIERS.gamesWon;
+
   const breakdown = [
-    { label: 'Team Wins', points: teamWins },
-    { label: 'Clutch Plays', points: clutchPlays },
-    { label: 'Game Impact', points: gameImpact },
-    { label: 'Availability', points: availability },
+    { label: 'Innings Won', count: raw.InningsWon, weight: WIN_MULTIPLIERS.inningsWon, points: inningsWonPoints },
+    { label: 'Games Won', count: raw.Wins, weight: WIN_MULTIPLIERS.gamesWon, points: gamesWonPoints },
   ];
-  
-  // Adjust to ensure total matches
-  const sum = breakdown.reduce((acc, item) => acc + item.points, 0);
-  breakdown[breakdown.length - 1].points += winPts - sum;
-  
+
   return {
     category: 'Win Points',
-    breakdown: breakdown.map(item => ({ label: item.label, value: item.points, points: item.points })),
-    total: winPts,
+    breakdown: breakdown.map((item) => ({ label: item.label, value: item.points, points: item.points, weight: `${item.count} × ${item.weight}` })),
+    total: row.winPts,
   };
 }
 
-// Calculate MVP points breakdown
+// Calculate MVP points breakdown from raw data
 function calculateMVPBreakdown(row: LeaderboardRow) {
   const mvpPts = typeof row.mvpPts === 'string' ? 0 : row.mvpPts;
-  
-  if (mvpPts === 0) {
+  const raw = row._raw;
+
+  if (!raw || mvpPts === 0) {
     return {
       category: 'MVP Points',
-      breakdown: [{ label: 'No MVP Awards', value: 0, points: 0 }],
-      total: 0,
+      breakdown: [{ label: 'No MVP Awards', value: 0, points: 0, weight: '' }],
+      total: mvpPts,
     };
   }
-  
-  // MVP points are typically from game MVPs, weekly awards, and season honors
-  const gameMVPs = Math.round(mvpPts * 0.50);
-  const weeklyAwards = Math.round(mvpPts * 0.30);
-  const seasonHonors = Math.round(mvpPts * 0.20);
-  
+
   const breakdown = [
-    { label: 'Game MVPs', points: gameMVPs },
-    { label: 'Weekly Awards', points: weeklyAwards },
-    { label: 'Season Honors', points: seasonHonors },
-  ];
-  
-  // Adjust to ensure total matches
-  const sum = breakdown.reduce((acc, item) => acc + item.points, 0);
-  breakdown[breakdown.length - 1].points += mvpPts - sum;
-  
+    { label: '1st Place MVPs', count: raw.MVP1Points, points: raw.MVP1Points },
+    { label: '2nd Place MVPs', count: raw.MVP2Points, points: raw.MVP2Points },
+    { label: '3rd Place MVPs', count: raw.MVP3Points, points: raw.MVP3Points },
+    { label: 'Defense MVPs', count: raw.MVPDefensePoints, points: raw.MVPDefensePoints },
+  ].filter((item) => item.count > 0);
+
   return {
     category: 'MVP Points',
-    breakdown: breakdown.map(item => ({ label: item.label, value: item.points, points: item.points })),
+    breakdown: breakdown.map((item) => ({ label: item.label, value: item.points, points: item.points, weight: `${item.count}×` })),
     total: mvpPts,
   };
 }
 
-// Calculate stat breakdown based on position and stat points
+// Calculate stat breakdown based on raw hitting and pitching data
 function calculateStatBreakdown(row: LeaderboardRow) {
-  const { position: pos, statPts } = row;
-  const isPitcher = pos.includes('P');
-  const isCatcher = pos === 'C';
-  const isInfield = pos === 'IF';
-  const isOutfield = pos === 'OF';
-
-  if (isPitcher) {
-    // Pitching stats breakdown
-    const breakdown = [
-      { label: 'Strikeouts', ratio: 0.35 },
-      { label: 'Wins', ratio: 0.25 },
-      { label: 'Saves', ratio: 0.20 },
-      { label: 'Innings Pitched', ratio: 0.15 },
-      { label: 'ERA Bonus', ratio: 0.05 },
-    ];
-    
-    const calculated = breakdown.map(item => ({
-      ...item,
-      points: Math.round(statPts * item.ratio),
-    }));
-    
-    // Adjust the last item to ensure total matches exactly
-    const sum = calculated.reduce((acc, item) => acc + item.points, 0);
-    calculated[calculated.length - 1].points += statPts - sum;
-    
+  const raw = row._raw;
+  if (!raw) {
     return {
-      category: 'Pitching Stats',
-      breakdown: calculated.map(item => ({ label: item.label, value: item.points, points: item.points })),
-      total: statPts,
-    };
-  } else if (isCatcher) {
-    // Catcher stats (batting + fielding)
-    const breakdown = [
-      { label: 'Hits', ratio: 0.30 },
-      { label: 'RBIs', ratio: 0.25 },
-      { label: 'Home Runs', ratio: 0.20 },
-      { label: 'Putouts', ratio: 0.15 },
-      { label: 'Assists', ratio: 0.10 },
-    ];
-    
-    const calculated = breakdown.map(item => ({
-      ...item,
-      points: Math.round(statPts * item.ratio),
-    }));
-    
-    const sum = calculated.reduce((acc, item) => acc + item.points, 0);
-    calculated[calculated.length - 1].points += statPts - sum;
-    
-    return {
-      category: 'Catcher Stats',
-      breakdown: calculated.map(item => ({ label: item.label, value: item.points, points: item.points })),
-      total: statPts,
-    };
-  } else if (isInfield) {
-    // Infield stats (batting + fielding)
-    const breakdown = [
-      { label: 'Hits', ratio: 0.35 },
-      { label: 'RBIs', ratio: 0.25 },
-      { label: 'Runs', ratio: 0.20 },
-      { label: 'Doubles', ratio: 0.12 },
-      { label: 'Fielding', ratio: 0.08 },
-    ];
-    
-    const calculated = breakdown.map(item => ({
-      ...item,
-      points: Math.round(statPts * item.ratio),
-    }));
-    
-    const sum = calculated.reduce((acc, item) => acc + item.points, 0);
-    calculated[calculated.length - 1].points += statPts - sum;
-    
-    return {
-      category: 'Infield Stats',
-      breakdown: calculated.map(item => ({ label: item.label, value: item.points, points: item.points })),
-      total: statPts,
-    };
-  } else if (isOutfield) {
-    // Outfield stats (batting + fielding)
-    const breakdown = [
-      { label: 'Hits', ratio: 0.30 },
-      { label: 'RBIs', ratio: 0.25 },
-      { label: 'Runs', ratio: 0.20 },
-      { label: 'Stolen Bases', ratio: 0.15 },
-      { label: 'Fielding', ratio: 0.10 },
-    ];
-    
-    const calculated = breakdown.map(item => ({
-      ...item,
-      points: Math.round(statPts * item.ratio),
-    }));
-    
-    const sum = calculated.reduce((acc, item) => acc + item.points, 0);
-    calculated[calculated.length - 1].points += statPts - sum;
-    
-    return {
-      category: 'Outfield Stats',
-      breakdown: calculated.map(item => ({ label: item.label, value: item.points, points: item.points })),
-      total: statPts,
-    };
-  } else {
-    // Default batting stats
-    const breakdown = [
-      { label: 'Hits', ratio: 0.35 },
-      { label: 'RBIs', ratio: 0.30 },
-      { label: 'Runs', ratio: 0.20 },
-      { label: 'Home Runs', ratio: 0.15 },
-    ];
-    
-    const calculated = breakdown.map(item => ({
-      ...item,
-      points: Math.round(statPts * item.ratio),
-    }));
-    
-    const sum = calculated.reduce((acc, item) => acc + item.points, 0);
-    calculated[calculated.length - 1].points += statPts - sum;
-    
-    return {
-      category: 'Batting Stats',
-      breakdown: calculated.map(item => ({ label: item.label, value: item.points, points: item.points })),
-      total: statPts,
+      category: 'Stat Points',
+      breakdown: [{ label: 'No data', value: 0, points: 0, weight: '' }],
+      total: row.statPts,
     };
   }
+
+  const breakdown = [];
+
+  // Hitting stats
+  if (raw.singles > 0) {
+    breakdown.push({ label: 'Singles', count: raw.singles, weight: STAT_POINTS.single, points: raw.singles * STAT_POINTS.single });
+  }
+  if (raw.doubles > 0) {
+    breakdown.push({ label: 'Doubles', count: raw.doubles, weight: STAT_POINTS.double, points: raw.doubles * STAT_POINTS.double });
+  }
+  if (raw.triples > 0) {
+    breakdown.push({ label: 'Triples', count: raw.triples, weight: STAT_POINTS.triple, points: raw.triples * STAT_POINTS.triple });
+  }
+  if (raw.homeRuns > 0) {
+    breakdown.push({ label: 'Home Runs', count: raw.homeRuns, weight: STAT_POINTS.homeRun, points: raw.homeRuns * STAT_POINTS.homeRun });
+  }
+  if (raw.stolenBases > 0) {
+    breakdown.push({ label: 'Stolen Bases', count: raw.stolenBases, weight: STAT_POINTS.stolenBase, points: raw.stolenBases * STAT_POINTS.stolenBase });
+  }
+  if (raw.caughtStealing !== 0) {
+    breakdown.push({ label: 'Caught Stealing', count: raw.caughtStealing, weight: STAT_POINTS.caughtStealing, points: raw.caughtStealing * STAT_POINTS.caughtStealing });
+  }
+  if (raw.walks > 0) {
+    breakdown.push({ label: 'Walks', count: raw.walks, weight: STAT_POINTS.walk, points: raw.walks * STAT_POINTS.walk });
+  }
+  if (raw.hitByPitch > 0) {
+    breakdown.push({ label: 'Hit By Pitch', count: raw.hitByPitch, weight: STAT_POINTS.hitByPitch, points: raw.hitByPitch * STAT_POINTS.hitByPitch });
+  }
+  if (raw.sacrifices > 0) {
+    breakdown.push({ label: 'Sacrifices', count: raw.sacrifices, weight: STAT_POINTS.sacrifice, points: raw.sacrifices * STAT_POINTS.sacrifice });
+  }
+
+  // Pitching stats
+  if (raw.outs > 0) {
+    breakdown.push({ label: 'Outs Recorded', count: raw.outs, weight: PITCHING_POINTS.out, points: raw.outs * PITCHING_POINTS.out });
+  }
+  if (raw.allowedRuns !== 0) {
+    breakdown.push({ label: 'Runs Allowed', count: raw.allowedRuns, weight: PITCHING_POINTS.allowedRun, points: raw.allowedRuns * PITCHING_POINTS.allowedRun });
+  }
+
+  // If no stats found, show a message
+  if (breakdown.length === 0) {
+    breakdown.push({ label: 'No statistics recorded', count: 0, weight: 0, points: 0 });
+  }
+
+  return {
+    category: 'Stat Points',
+    breakdown: breakdown.map((item) => ({ label: item.label, value: item.points, points: item.points, weight: `${item.count} × ${item.weight}` })),
+    total: row.statPts,
+  };
 }
 
 export default function InfoPopup({ row, position, type, onClose }: InfoPopupProps) {
@@ -224,10 +173,12 @@ export default function InfoPopup({ row, position, type, onClose }: InfoPopupPro
     };
   }, [onClose]);
 
-  const breakdown = 
-    type === 'win' ? calculateWinBreakdown(row) :
-    type === 'mvp' ? calculateMVPBreakdown(row) :
-    calculateStatBreakdown(row);
+  const breakdown =
+    type === 'win'
+      ? calculateWinBreakdown(row)
+      : type === 'mvp'
+        ? calculateMVPBreakdown(row)
+        : calculateStatBreakdown(row);
 
   return (
     <div
@@ -254,7 +205,10 @@ export default function InfoPopup({ row, position, type, onClose }: InfoPopupPro
         <div className="info-popup__breakdown">
           {breakdown.breakdown.map((item, index) => (
             <div key={index} className="info-popup__stat-row">
-              <span className="info-popup__stat-label">{item.label}</span>
+              <div className="info-popup__stat-label-group">
+                <span className="info-popup__stat-label">{item.label}</span>
+                <span className="info-popup__stat-weight">{item.weight}</span>
+              </div>
               <span className="info-popup__stat-value">{item.points} pts</span>
             </div>
           ))}

@@ -625,9 +625,22 @@ th:nth-child(3) {
   border-bottom: none;
 }
 
+.info-popup__stat-label-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .info-popup__stat-label {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+.info-popup__stat-weight {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  opacity: 0.7;
+  font-weight: 500;
 }
 
 .info-popup__stat-value {

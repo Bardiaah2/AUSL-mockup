@@ -1,6 +1,10 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
+from bson.objectid import ObjectId
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 app = Flask(__name__)
 
@@ -10,18 +14,44 @@ db = client["softball"]
 collection1 = db["pitching_players"]   # pitching
 collection2 = db["players_hitting"]    # hitting
 collection3 = db["players"]            # combined
+player_info = db["player_info"] 
+mvp_points = db["MVP_points"]
+win_points = db["Win_points"]
 
 # Points values
 hitting_values = {
     "Single": 10, "Double": 20, "Triple": 30, "Home Run": 40,
-    "Stolen Base": 20, "Caught Stealing": -20,
-    "Walk": 20, "HBP": 8, "Sacrifice Fly/Bunt": 10
+    "Stolen Base": 10, "Caught Stealing": -10,
+    "Walk": 10, "HBP": 8, "Sacrifice Fly/Bunt": 10
 }
 pitching_values = {"out": 4, "allowed run": -10}
 
+
 # --- Helper functions ---
+
+def calculate_outs(doc):
+    ip = doc.get("IP", 0)
+
+    try:
+        ip = float(ip)
+    except (ValueError, TypeError):
+        ip = 0
+
+    whole = int(ip)
+    decmial = ip-whole
+    decmial = int(round(decmial * 10))
+    outs = whole*3 + decmial
+    return outs
+
 def calculate_pitching_points(doc):
-    return doc.get("IP", 0) * pitching_values["out"] + doc.get("ER", 0) * pitching_values["allowed run"]
+    outs = int(calculate_outs(doc))
+
+    try:
+        er = int(doc.get("ER", 0))
+    except (ValueError, TypeError):
+        er = 0
+
+    return outs * pitching_values["out"] + er * pitching_values["allowed run"]
 
 def calculate_hitting_points(doc):
     return (
@@ -78,6 +108,28 @@ def update_hitting_stats():
         collection2.update_one({"_id": doc_id}, {"$set": {"Points": points}})
     return jsonify({"status": "Hitting points updated"}), 200
 
+# --- MVP Points ---
+@app.route("/api/mvp", methods=["GET"])
+def get_MVP_points():
+    docs = list(mvp_points.find({}))
+    result = []
+    for doc in docs:
+        doc_copy = doc.copy()
+        doc_copy.pop("_id", None)
+        result.append(doc_copy)
+    return jsonify(result)
+
+# --- Win Points ---
+@app.route("/api/win", methods=["GET"])
+def get_WIN_points():
+    docs = list(win_points.find({}))
+    result = []
+    for doc in docs:
+        doc_copy = doc.copy()
+        doc_copy.pop("_id", None)
+        result.append(doc_copy)
+    return jsonify(result)
+
 # --- Combined Points ---
 @app.route("/api/points", methods=["GET"])
 def get_combined_points():
@@ -98,35 +150,147 @@ def update_combined_points():
         name = doc.get("Athlete")
         if not name:
             continue
+
+        pitching_points = doc.get("Points", 0)
+
+        try:
+            pitching_points = int(pitching_points)
+        except ValueError:
+            pitching_points = 0
+
         combined[name] = {
             "Athlete": name,
-            "PitchingPoints": doc.get("Points", 0),
-            "HittingPoints": 0
+            "PitchingPoints": pitching_points,
+            "HittingPoints": 0,  
+            "MVPPoints": 0,
+            "WINPoints" : 0
+
         }
+        
 
     # Pull hitting points
     for doc in collection2.find({}):
         name = doc.get("Athlete")
         if not name:
             continue
+
+        hitting_points = doc.get("Points", 0)
+
+        try:
+            hitting_points = int(hitting_points)
+        except ValueError:
+            hitting_points = 0
+
         if name in combined:
-            combined[name]["HittingPoints"] = doc.get("Points", 0)
+            combined[name]["HittingPoints"] = hitting_points
         else:
             combined[name] = {
                 "Athlete": name,
                 "PitchingPoints": 0,
-                "HittingPoints": doc.get("Points", 0)
+                "HittingPoints": hitting_points
+            }
+
+    for doc in mvp_points.find({}):
+        name = doc.get("Athlete")
+        if not name:
+            continue
+
+        mvp_point = doc.get("Total MVP", 0)
+
+        try:
+            mvp_point = int(mvp_point)
+        except ValueError:
+            mvp_point = 0
+
+        if name in combined:
+            combined[name]["MVPPoints"] = mvp_point
+        else: 
+            combined[name] = {
+                "Athlete": name,
+                "PitchingPoints": 0,
+                "HittingPoints": 0,  
+                "MVPPoints": mvp_point,
+                "WINPoints" : 0
+            }
+    
+    for doc in win_points.find({}):
+        name = doc.get("Athlete")
+        if not name:
+            continue
+
+        win_point = doc.get("Total Win", 0)
+
+        try:
+            win_point = int(win_point)
+        except ValueError:
+            win_point = 0
+
+        if name in combined:
+            combined[name]["WINPoints"] = win_point
+        else: 
+            combined[name] = {
+                "Athlete": name,
+                "PitchingPoints": 0,
+                "HittingPoints": 0,  
+                "MVPPoints": 0,
+                "WINPoints" : win_point
             }
 
     # Clear old combined collection and insert new totals
     collection3.delete_many({})
     final_docs = []
     for data in combined.values():
-        data["TotalPoints"] = data["PitchingPoints"] + data["HittingPoints"]
+        data["TotalPoints"] = (
+            data.get("PitchingPoints", 0) +
+            data.get("HittingPoints", 0) +
+            data.get("MVPPoints", 0) +
+            data.get("WINPoints", 0)
+        )
         collection3.insert_one(data)
         final_docs.append(data)
 
     return jsonify({"status": "Combined points updated", "count": len(final_docs)}), 200
+
+@app.route("/api/player_info", methods=["GET"])
+def get_player_info():
+    docs = list(player_info.find({}))
+    for d in docs:
+        d["_id"] = str(d["_id"])
+    return jsonify(docs)
+
+
+# ⭐ UPDATE/REFRESH PLAYER INFO (re-import after CSV changes)
+@app.route("/api/player_info", methods=["POST"])
+def update_player_info():
+    data = request.get_json()
+
+    if not data or "players" not in data:
+        return jsonify({"error": "Expected JSON: { players: [...] }"}), 400
+
+    players = data["players"]
+
+    # Remove old docs
+    player_info.delete_many({})
+
+    # Insert new updated docs
+    for p in players:
+        player_info.insert_one(p)
+
+    return jsonify({"status": "player_info updated", "count": len(players)}), 200
+
+
+# ⭐ DELETE PLAYER
+@app.route("/api/player_info/<player_id>", methods=["DELETE"])
+def delete_player(player_id):
+    try:
+        result = player_info.delete_one({"_id": ObjectId(player_id)})
+        if result.deleted_count == 0:
+            return jsonify({"status": "no player found"}), 404
+    except:
+        return jsonify({"error": "Invalid ID format"}), 400
+    
+    return jsonify({"status": "player deleted"}), 200
+
 
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
