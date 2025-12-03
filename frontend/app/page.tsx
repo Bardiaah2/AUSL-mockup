@@ -9,6 +9,7 @@ import StatusGrid from "./components/StatusGrid";
 import ProtectedPlayers from "./components/ProtectedPlayers";
 import NewsMarquee from "./components/NewsMarquee";
 import CTASection from "./components/CTASection";
+import ProtectedPage from "./components/ProtectedPage";
 import { LeaderboardRow } from "./types";
 import { getLeaderboard } from "./lib/api";
 import { fallbackLeaderboardRows } from "./tmp/fallbackData";
@@ -38,41 +39,43 @@ export default function Page() {
   }, []);
 
   return (
-    <main className="page">
-      <div className="page__glow" aria-hidden />
-      <Header />
-      <Hero />
-      <FilterPanel />
-      {isLoading && (
-        <section className="leaderboard-card">
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            Loading leaderboard...
-          </div>
-        </section>
-      )}
-      {!isLoading && (
-        <>
-          <LeaderboardTable leaderboardRows={leaderboardRows} />
-          {error && (
-            <div style={{ 
-              padding: '1rem', 
-              margin: '1rem 0', 
-              background: 'rgba(248, 113, 113, 0.1)', 
-              border: '1px solid var(--danger)',
-              borderRadius: '0.5rem',
-              color: 'var(--danger)',
-              fontSize: '0.9rem'
-            }}>
-              {error}
+    <ProtectedPage>
+      <main className="page">
+        <div className="page__glow" aria-hidden />
+        <Header />
+        <Hero />
+        <FilterPanel />
+        {isLoading && (
+          <section className="leaderboard-card">
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Loading leaderboard...
             </div>
-          )}
-        </>
-      )}
-      <StatusGrid />
-      <ProtectedPlayers />
-      <NewsMarquee />
-      <CTASection />
-    </main>
+          </section>
+        )}
+        {!isLoading && (
+          <>
+            <LeaderboardTable leaderboardRows={leaderboardRows} />
+            {error && (
+              <div style={{ 
+                padding: '1rem', 
+                margin: '1rem 0', 
+                background: 'rgba(248, 113, 113, 0.1)', 
+                border: '1px solid var(--danger)',
+                borderRadius: '0.5rem',
+                color: 'var(--danger)',
+                fontSize: '0.9rem'
+              }}>
+                {error}
+              </div>
+            )}
+          </>
+        )}
+        <StatusGrid />
+        <ProtectedPlayers />
+        <NewsMarquee />
+        <CTASection />
+      </main>
+    </ProtectedPage>
   );
 }
 

@@ -75,3 +75,35 @@ export async function getLeaderboard(options: FetchOptions = {}): Promise<Leader
   console.error('Error fetching leaderboard after retries:', lastError);
   throw lastError || new Error('Failed to fetch leaderboard');
 }
+
+/**
+ * Logs in a user with username and password
+ * @param username The user's username/email
+ * @param password The user's password
+ * @returns Success response with session cookie
+ * @throws Error if login fails
+ */
+export async function login(username: string, password: string): Promise<{ message: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+      credentials: 'include', // Include cookies in request/response
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Login failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Login failed';
+    console.error('Login error:', message);
+    throw new Error(message);
+  }
+}

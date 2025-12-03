@@ -1,9 +1,10 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, make_response, request
 from pymongo import MongoClient
 import os
 import time
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
+import datetime
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
@@ -38,6 +39,7 @@ collection3 = db["players"]            # combined
 player_info = db["player_info"] 
 mvp_points = db["MVP_points"]
 win_points = db["Win_points"]
+users_collection = db["login"]
 
 # Points values
 hitting_values = {
@@ -312,6 +314,49 @@ def delete_player(player_id):
     
     return jsonify({"status": "player deleted"}), 200
 
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Request body is required"}), 400
+
+        username = data.get("username")
+        password = data.get("password")
+
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+
+        # --- Find user in database ---
+        user = users_collection.find_one({"username": username})
+
+        if not user or user.get("password") != password:
+            return jsonify({"error": "Invalid username or password"}), 401
+
+        # --- Create cookie session token ---
+        cookie_value = str(user["_id"])
+
+        # Cookie expiration (e.g., 30 minutes)
+        expire_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+
+        resp = make_response(jsonify({"message": "Login successful"}))
+
+        resp.set_cookie(
+            "session_id",
+            cookie_value,
+            expires=expire_time,
+            httponly=True,     # JS cannot read it → safer
+            secure=False,      # set to True if using HTTPS
+            samesite="Lax"
+        )
+
+        return resp, 200
+
+    except Exception as e:
+        print(f"✗ Login error: {e}")
+        return jsonify({"error": f"Login error: {str(e)}"}), 500
 
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
