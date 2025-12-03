@@ -64,17 +64,26 @@ interface PlayerInfoData {
 
 async function fetchFromBackend<T>(endpoint: string): Promise<T[]> {
   const url = `${BACKEND_URL}${endpoint}`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    cache: 'no-store',
-  });
+  console.log(`[leaderboard] Fetching: ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${endpoint}: ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${endpoint}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`[leaderboard] ✓ ${endpoint} - ${Array.isArray(data) ? data.length : '1'} records`);
+    return data;
+  } catch (err) {
+    console.error(`[leaderboard] ✗ Error fetching ${endpoint}:`, err);
+    throw err;
   }
-
-  return response.json();
 }
 
 function calculateGames(hittingStats: HittingStatsData | undefined, pitchingStats: PitchingStatsData | undefined): number {
@@ -131,6 +140,8 @@ function extractStatBreakdown(hitting: HittingStatsData | undefined, pitching: P
 
 export async function GET() {
   try {
+    console.log(`[leaderboard] Starting fetch from BACKEND_URL: ${BACKEND_URL}`);
+    
     // Fetch all data in parallel
     const [pointsData, hittingData, pitchingData, mvpData, winData, playerInfoData] = await Promise.all([
       fetchFromBackend<PointsData>('/api/points'),

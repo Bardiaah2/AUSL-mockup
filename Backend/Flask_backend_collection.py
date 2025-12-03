@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
+import time
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 
@@ -8,8 +9,28 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 app = Flask(__name__)
 
-# MongoDB connection
-client = MongoClient(os.getenv("DATABASE_URL"))  # Replace with your URI
+# MongoDB connection with retry logic
+def get_mongo_connection():
+    database_url = os.getenv("DATABASE_URL")
+    max_retries = 5
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            client = MongoClient(database_url, serverSelectionTimeoutMS=5000)
+            # Verify connection
+            client.admin.command('ping')
+            print(f"✓ MongoDB connected successfully")
+            return client
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"⚠ MongoDB connection failed (attempt {attempt + 1}/{max_retries}): {e}")
+                time.sleep(retry_delay)
+            else:
+                print(f"✗ Failed to connect to MongoDB after {max_retries} attempts")
+                raise
+
+client = get_mongo_connection()
 db = client["softball"]
 collection1 = db["pitching_players"]   # pitching
 collection2 = db["players_hitting"]    # hitting
@@ -296,4 +317,13 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", 5000))
     debug = os.getenv("FLASK_ENV", "production") == "development"
+    
+    print(f"\n{'='*60}")
+    print(f"Starting Flask Backend Server")
+    print(f"{'='*60}")
+    print(f"Host: {host}")
+    print(f"Port: {port}")
+    print(f"Debug Mode: {debug}")
+    print(f"{'='*60}\n")
+    
     app.run(host=host, port=port, debug=debug)

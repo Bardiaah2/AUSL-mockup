@@ -1,5 +1,28 @@
 import { LeaderboardRow } from "../types";
 
+// Default _raw breakdown for fallback data
+const defaultRaw = {
+  MVP1Points: 0,
+  MVP2Points: 0,
+  MVP3Points: 0,
+  MVPDefensePoints: 0,
+  InningsWon: 0,
+  Wins: 0,
+  singles: 0,
+  doubles: 0,
+  triples: 0,
+  homeRuns: 0,
+  stolenBases: 0,
+  caughtStealing: 0,
+  walks: 0,
+  hitByPitch: 0,
+  sacrifices: 0,
+  sacfly: 0,
+  sacbunt: 0,
+  outs: 0,
+  allowedRuns: 0,
+};
+
 // Fallback data in case API fails
 export const fallbackLeaderboardRows: LeaderboardRow[] = [
   {
@@ -16,6 +39,27 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 990,
     statPts: 300,
     mvpPts: 300,
+    _raw: {
+      MVP1Points: 100,
+      MVP2Points: 100,
+      MVP3Points: 100,
+      MVPDefensePoints: 0,
+      InningsWon: 99,
+      Wins: 0,
+      singles: 10,
+      doubles: 5,
+      triples: 2,
+      homeRuns: 1,
+      stolenBases: 3,
+      caughtStealing: 1,
+      walks: 5,
+      hitByPitch: 1,
+      sacrifices: 2,
+      sacfly: 0,
+      sacbunt: 0,
+      outs: 0,
+      allowedRuns: 0,
+    },
   },
   {
     rank: 2,
@@ -31,6 +75,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 680,
     statPts: 488,
     mvpPts: 280,
+    _raw: defaultRaw,
   },
   {
     rank: 3,
@@ -46,6 +91,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 820,
     statPts: 264,
     mvpPts: 100,
+    _raw: defaultRaw,
   },
   {
     rank: 4,
@@ -61,6 +107,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 860,
     statPts: 232,
     mvpPts: 80,
+    _raw: defaultRaw,
   },
   {
     rank: 5,
@@ -76,6 +123,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 900,
     statPts: 200,
     mvpPts: 40,
+    _raw: defaultRaw,
   },
   {
     rank: 6,
@@ -91,6 +139,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 610,
     statPts: 286,
     mvpPts: 200,
+    _raw: defaultRaw,
   },
   {
     rank: 7,
@@ -106,6 +155,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 850,
     statPts: 148,
     mvpPts: 80,
+    _raw: defaultRaw,
   },
   {
     rank: 8,
@@ -121,6 +171,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 810,
     statPts: 208,
     mvpPts: 40,
+    _raw: defaultRaw,
   },
   {
     rank: 9,
@@ -136,6 +187,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 690,
     statPts: 164,
     mvpPts: 140,
+    _raw: defaultRaw,
   },
   {
     rank: 10,
@@ -151,6 +203,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 790,
     statPts: 200,
     mvpPts: "–",
+    _raw: defaultRaw,
   },
   {
     rank: 11,
@@ -166,6 +219,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 740,
     statPts: 180,
     mvpPts: 60,
+    _raw: defaultRaw,
   },
   {
     rank: 12,
@@ -181,6 +235,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 590,
     statPts: 324,
     mvpPts: 60,
+    _raw: defaultRaw,
   },
   {
     rank: 13,
@@ -196,6 +251,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 650,
     statPts: 250,
     mvpPts: 40,
+    _raw: defaultRaw,
   },
   {
     rank: 14,
@@ -211,6 +267,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 790,
     statPts: 108,
     mvpPts: 40,
+    _raw: defaultRaw,
   },
   {
     rank: 15,
@@ -226,6 +283,7 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 730,
     statPts: 156,
     mvpPts: 40,
+    _raw: defaultRaw,
   },
   {
     rank: 16,
@@ -241,5 +299,6 @@ export const fallbackLeaderboardRows: LeaderboardRow[] = [
     winPts: 700,
     statPts: 190,
     mvpPts: 20,
+    _raw: defaultRaw,
   },
 ];
