@@ -12,7 +12,7 @@ collection1 = db["pitching_players"]      # pitching
 collection2 = db["players_hitting"]       # hitting
 collection3 = db["players"]               # combined output collection
 player_info = db["player_info"]
-mvp_points = db["pitching_players"]       # contains Total MVP
+mvp_points = db["MVP_points"]       # contains Total MVP
 win_points = db["Win_points"]   
 users_collection = db["login"]          # contains Total Win
 
