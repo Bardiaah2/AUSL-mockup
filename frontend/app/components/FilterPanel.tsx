@@ -1,18 +1,26 @@
 const filters = {
   series: [
     "2025 All-Star Cup",
+    "2024 Championship*",
+    "2024 AUX Softball",
+    "2023 AUX Softball",
+    "2022 AUX Softball",
+    "2023 Championship*",
+    "2022 Championship*",
+    "2021 Championship*",
+    "2020 Championship*",
   ],
-    scope: [],
+  scope: ["All Series", "All Games", "All Players"],
 };
 
 function FilterPanel() {
   return (
-    <section className="filter-panel flex items-center justify-center min-h-screen">
-      <div className="flex flex-col items-center justify-center gap-6">
+    <section className="filter-panel ">
+      <div className="flex items-center justify-center h-screen">
       <div className="filter-panel__tabs center">
         <button className="filter-tab filter-tab--active">Overview</button>
       </div>
-      <div className="filter-panel__filters flex items-center justify-center gap-4">
+      <div className="filter-panel__filters">
         {filters.series.map((item) => (
           <button
             key={item}

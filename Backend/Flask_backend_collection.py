@@ -359,7 +359,7 @@ def login():
         return jsonify({"error": f"Login error: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    host = os.getenv("HOST", "0.0.0.0")
+    host = os.getenv("HOST", "localhost")
     port = int(os.getenv("PORT", 5000))
     debug = os.getenv("FLASK_ENV", "production") == "development"
     

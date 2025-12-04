@@ -6,8 +6,9 @@ services:
     name: ausl-backend
     env: docker
     repo: https://github.com/Bardiaah2/AUSL-mockup
-    branch: main
+    branch: deployment
     dockerfilePath: Backend/Dockerfile
+    rootDir: Backend
     # Let the Dockerfile's CMD run. Set PORT/DATABASE_URL as env vars below.
     envVars:
       - key: PORT
@@ -24,8 +25,9 @@ services:
     name: ausl-frontend
     env: docker
     repo: https://github.com/Bardiaah2/AUSL-mockup
-    branch: main
+    branch: deployment
     dockerfilePath: frontend/Dockerfile
+    rootDir: frontend
     # Frontend Dockerfile uses NEXT_PUBLIC_API_URL / BACKEND_URL environment variables
     envVars:
       - key: PORT

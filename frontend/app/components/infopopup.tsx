@@ -33,6 +33,13 @@ const WIN_MULTIPLIERS = {
   gamesWon: 70,
 };
 
+const MVP_MULTIPLIERS = {
+  firstPlace: 1,
+  secondPlace: 1,
+  thirdPlace: 1,
+  defenseMVP: 1,
+};
+
 // Calculate win points breakdown from raw data
 function calculateWinBreakdown(row: LeaderboardRow) {
   const raw = row._raw;
@@ -73,15 +80,15 @@ function calculateMVPBreakdown(row: LeaderboardRow) {
   }
 
   const breakdown = [
-    { label: '1st Place MVPs', count: raw.MVP1Points, points: raw.MVP1Points },
-    { label: '2nd Place MVPs', count: raw.MVP2Points, points: raw.MVP2Points },
-    { label: '3rd Place MVPs', count: raw.MVP3Points, points: raw.MVP3Points },
-    { label: 'Defense MVPs', count: raw.MVPDefensePoints, points: raw.MVPDefensePoints },
+    { label: '1st Place MVPs', count: raw.MVP1Points, points: raw.MVP1Points, weight: MVP_MULTIPLIERS.firstPlace },
+    { label: '2nd Place MVPs', count: raw.MVP2Points, points: raw.MVP2Points, weight: MVP_MULTIPLIERS.secondPlace },
+    { label: '3rd Place MVPs', count: raw.MVP3Points, points: raw.MVP3Points, weight: MVP_MULTIPLIERS.thirdPlace },
+    { label: 'Defense MVPs', count: raw.MVPDefensePoints, points: raw.MVPDefensePoints, weight: MVP_MULTIPLIERS.defenseMVP },
   ].filter((item) => item.count > 0);
 
   return {
     category: 'MVP Points',
-    breakdown: breakdown.map((item) => ({ label: item.label, value: item.points, points: item.points, weight: `${item.count}×` })),
+    breakdown: breakdown.map((item) => ({ label: item.label, value: item.points, points: item.points, weight: `${item.count} × ${item.weight}` })),
     total: mvpPts,
   };
 }
